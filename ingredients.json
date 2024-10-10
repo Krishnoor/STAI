@@ -1,0 +1,14 @@
+{
+    "harmfulIngredients": {
+      "water": {
+        "diseases": ["niga", "giga"]
+      },
+      "IngredientB": {
+        "diseases": ["Disease3"]
+      },
+      "IngredientC": {
+        "diseases": ["Disease1", "Disease4", "Disease5"]
+      }
+    }
+  }
+  
