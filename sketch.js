@@ -1,3 +1,22 @@
+document.addEventListener('DOMContentLoaded', function() {
+    const startButton = document.getElementById('start-button');
+    const homeScreen = document.getElementById('home-screen');
+    const scannerScreen = document.getElementById('scanner-screen');
+
+    if (!startButton) {
+        console.error("Start Button not found!");
+    }
+
+    startButton.addEventListener('click', () => {
+        // Hide home screen and show scanner screen
+        homeScreen.style.display = 'none';
+        scannerScreen.style.display = 'block'; // Directly display the scanner screen
+        startCamera(); // Initialize camera
+    });
+
+
+});
+
 let cameraInput;
 let capturedImage;
 let extractedTextElement;
@@ -18,58 +37,53 @@ function setup() {
     extractedTextElement = document.getElementById('extracted-text');
 }
 
-window.onload = function () {
-    const startButton = document.getElementById('start-button');
-    const homeScreen = document.getElementById('home-screen');
-    const scannerScreen = document.getElementById('scanner-screen');
-
-    startButton.addEventListener('click', () => {
-        // Hide home screen and show scanner screen
-        homeScreen.style.display = 'none';
-        scannerScreen.style.display = 'block';
-        startCamera();
-    });
-
-    const foodPairingButton = document.getElementById('food-pairing-button');
-    foodPairingButton.addEventListener('click', () => {
-        // Implement food pairing functionality here
-        alert("Food Pairing feature coming soon!");
-    });
-};
-
 function startCamera() {
-    cameraInput = createCapture(VIDEO);
-    cameraInput.size(400, 300);
-    cameraInput.parent('video-container'); // Attach video to a div in HTML
+    // Use constraints to access the back camera
+    const constraints = {
+        video: {
+            facingMode: { exact: "environment" } // Use back camera
+        }
+    };
 
-    // Move the event listener bindings for buttons inside this function
-    const scanButton = document.getElementById('scan-button');
-    const editButton = document.getElementById('edit-button');
-    const saveButton = document.getElementById('save-button');
+    navigator.mediaDevices.getUserMedia(constraints)
+        .then(function(stream) {
+            cameraInput = createCapture(VIDEO);
+            cameraInput.size(400, 300);
+            cameraInput.parent('video-container'); // Attach video to a div in HTML
+            cameraInput.elt.srcObject = stream; // Set the video stream
 
-    if (scanButton) {
-        scanButton.addEventListener('click', () => {
-            captureImage();
+            // Move the event listener bindings for buttons inside this function
+            const scanButton = document.getElementById('scan-button');
+            const editButton = document.getElementById('edit-button');
+            const saveButton = document.getElementById('save-button');
+
+            if (scanButton) {
+                scanButton.addEventListener('click', () => {
+                    captureImage();
+                });
+            } else {
+                console.error("Scan button not found!");
+            }
+
+            if (editButton) {
+                editButton.addEventListener('click', () => {
+                    enableEditing();
+                });
+            } else {
+                console.error("Edit button not found!");
+            }
+
+            if (saveButton) {
+                saveButton.addEventListener('click', () => {
+                    saveChanges();
+                });
+            } else {
+                console.error("Save button not found!");
+            }
+        })
+        .catch(function(error) {
+            console.error("Error accessing the camera:", error);
         });
-    } else {
-        console.error("Scan button not found!");
-    }
-
-    if (editButton) {
-        editButton.addEventListener('click', () => {
-            enableEditing();
-        });
-    } else {
-        console.error("Edit button not found!");
-    }
-
-    if (saveButton) {
-        saveButton.addEventListener('click', () => {
-            saveChanges();
-        });
-    } else {
-        console.error("Save button not found!");
-    }
 }
 
 function captureImage() {
@@ -105,24 +119,52 @@ function displayExtractedText(text) {
 }
 
 function checkHarmfulIngredients(extractedText) {
-    // Split the extracted text into words
-    const words = extractedText.split(/\s+/); // Split by whitespace
+    // Step 1: Clean and preprocess the extracted text
+    const cleanedText = extractedText
+        .toLowerCase() // Convert text to lowercase
+        .replace(/[^\w\s]/g, '') // Remove punctuation
+        .replace(/\s+/g, ' ') // Replace multiple spaces with a single space
+        .trim(); // Trim leading/trailing spaces
+
+    // Step 2: Split the cleaned text into individual words (ingredients)
+    const words = cleanedText.split(' ');
+
+    // Step 3: Filter out common words that are not ingredients
+    const ignoredWords = new Set(['and', 'or', 'sugar', 'salt']);
+    const filteredWords = words.filter(word => !ignoredWords.has(word));
+
+    // Step 4: Map of synonyms or alternative names for ingredients
+    const synonymMap = {
+        'vitamin c': 'ascorbic acid',
+        'e300': 'ascorbic acid',
+        'e330': 'citric acid',
+        // Add more synonyms or E-number mappings if needed
+    };
+
     const foundDiseases = new Set(); // Use a Set to avoid duplicates
 
-    words.forEach(word => {
-        const trimmedWord = word.trim().toLowerCase(); // Trim and convert to lower case
-        if (harmfulIngredientsData[trimmedWord]) {
-            const diseases = harmfulIngredientsData[trimmedWord].diseases;
+    // Step 5: Check for harmful ingredients and map synonyms
+    filteredWords.forEach(word => {
+        const ingredient = synonymMap[word] || word; // Use synonym if available
+        if (harmfulIngredientsData[ingredient]) {
+            const diseases = harmfulIngredientsData[ingredient].diseases;
             diseases.forEach(disease => foundDiseases.add(disease)); // Add diseases to the Set
         }
     });
 
-    // Display the found diseases
-    const diseasesDiv = document.getElementById('diseases');
+    // Step 6: Display results using SweetAlert
     if (foundDiseases.size > 0) {
-        diseasesDiv.innerText = "Harmful ingredients detected! Potential diseases: " + Array.from(foundDiseases).join(", ");
+        swal({
+            title: "Harmful ingredients detected!",
+            text: "Potential diseases: " + Array.from(foundDiseases).join(", "),
+            icon: "warning",
+        });
     } else {
-        diseasesDiv.innerText = "No harmful ingredients detected.";
+        swal({
+            title: "No harmful ingredients detected",
+            text: "You're safe!",
+            icon: "success",
+        });
     }
 }
 
