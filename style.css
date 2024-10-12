@@ -11,7 +11,7 @@ body {
 /* Add a semi-transparent overlay behind all content */
 .overlay {
   background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
-  position: absolute;
+  position: fixed; /* Change to fixed for full screen */
   top: 0;
   left: 0;
   width: 100%;
