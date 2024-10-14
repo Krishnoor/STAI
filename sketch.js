@@ -130,7 +130,7 @@ function checkHarmfulIngredients(extractedText) {
     const words = cleanedText.split(' ');
 
     // Step 3: Filter out common words that are not ingredients
-    const ignoredWords = new Set(['and', 'or', 'sugar', 'salt']);
+    const ignoredWords = new Set(['and', 'or', 'with', 'sugar', 'salt']); // You can expand this list
     const filteredWords = words.filter(word => !ignoredWords.has(word));
 
     // Step 4: Map of synonyms or alternative names for ingredients
@@ -143,29 +143,41 @@ function checkHarmfulIngredients(extractedText) {
 
     const foundDiseases = new Set(); // Use a Set to avoid duplicates
 
-    // Step 5: Check for harmful ingredients and map synonyms
-    filteredWords.forEach(word => {
-        const ingredient = synonymMap[word] || word; // Use synonym if available
-        if (harmfulIngredientsData[ingredient]) {
-            const diseases = harmfulIngredientsData[ingredient].diseases;
-            diseases.forEach(disease => foundDiseases.add(disease)); // Add diseases to the Set
+    // Step 5: Check for harmful ingredients in both single words and bigrams (two-word pairs)
+    for (let i = 0; i < filteredWords.length; i++) {
+        let singleWord = filteredWords[i];
+        let bigram = (i < filteredWords.length - 1) ? filteredWords[i] + ' ' + filteredWords[i + 1] : null;
+
+        // Map synonyms or check direct words
+        let ingredientSingle = synonymMap[singleWord] || singleWord;
+        let ingredientBigram = bigram ? (synonymMap[bigram] || bigram) : null;
+
+        // Check for harmful single words
+        if (harmfulIngredientsData[ingredientSingle]) {
+            harmfulIngredientsData[ingredientSingle].diseases.forEach(disease => foundDiseases.add(disease));
         }
-    });
+
+        // Check for harmful two-word phrases (bigrams)
+        if (ingredientBigram && harmfulIngredientsData[ingredientBigram]) {
+            harmfulIngredientsData[ingredientBigram].diseases.forEach(disease => foundDiseases.add(disease));
+        }
+    }
 
     // Step 6: Display results using SweetAlert
     if (foundDiseases.size > 0) {
-        swal({
-            title: "Harmful ingredients detected!",
+        Swal.fire({
+            icon: 'warning',
+            title: 'Harmful ingredients detected!',
             text: "Potential diseases: " + Array.from(foundDiseases).join(", "),
-            icon: "warning",
+            confirmButtonText: 'OK'
         });
     } else {
-        swal({
-            title: "No harmful ingredients detected",
-            text: "You're safe!",
-            icon: "success",
-        });
-    }
+        Swal.fire({
+            icon: 'success',
+            title: 'No harmful ingredients detected.',
+            confirmButtonText: 'OK'
+        });
+    }
 }
 
 function enableEditing() {
